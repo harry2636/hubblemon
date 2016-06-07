@@ -21,6 +21,7 @@ import os
 
 import common.rrd_data
 import common.remote_data_reader
+import common.sql_data
 from data_loader.loader_util import merge_loader
 from data_loader.loader_util import sum_loader
 from data_loader.loader_util import filter_loader
@@ -30,204 +31,205 @@ from data_loader.loader_util import draw_loader
 # rrd
 
 class rrd_storage_manager:
-	def __init__(self, hubblemon_path):
-		self.hubblemon_path = hubblemon_path
+        def __init__(self, hubblemon_path):
+                self.hubblemon_path = hubblemon_path
 
-	def get_handle(self, base, path):
-		if not path.endswith('.rrd'):
-			path += '.rrd'
+        def get_handle(self, base, path):
+                if not path.endswith('.rrd'):
+                        path += '.rrd'
 
-		try:
-			fd = self.get_local_data_handle(base, path)
-			return common.rrd_data.rrd_data(fd.path)
-		except:
-			return None
-
-	def get_local_data_handle(self, base, path):
-		if base[0] != '/':
-			base = os.path.join(self.hubblemon_path, base)
-		
-		path = os.path.join(base, path)
-
-		fd = open(path)
-		fd.path = path
-		return fd
-
-	def get_client_list(self, base):
-		client_list = []
-
-		if base[0] != '/':
-			base = os.path.join(self.hubblemon_path, base)
-
-		for dir in os.listdir(base):
-			dir_path = os.path.join(base, dir)
-
-			if os.path.isdir(dir_path):
-				client_list.append(dir)
-
-		return client_list
+                try:
+                        fd = self.get_local_data_handle(base, path)
+                        return common.rrd_data.rrd_data(fd.path)
+                except:
+                        return None
 
 
-	def get_data_list_of_client(self, base, client, prefix):
-		data_list = []
+        def get_local_data_handle(self, base, path):
+                if base[0] != '/':
+                        base = os.path.join(self.hubblemon_path, base)
 
-		if base[0] != '/':
-			base = os.path.join(self.hubblemon_path, base)
+                path = os.path.join(base, path)
 
-		path = os.path.join(base, client)
+                fd = open(path)
+                fd.path = path
+                return fd
 
-		for file in os.listdir(path):
-			if file.startswith(prefix):
-				data_list.append(file)
+        def get_client_list(self, base):
+                client_list = []
 
-		return data_list
+                if base[0] != '/':
+                        base = os.path.join(self.hubblemon_path, base)
+
+                for dir in os.listdir(base):
+                        dir_path = os.path.join(base, dir)
+
+                        if os.path.isdir(dir_path):
+                                client_list.append(dir)
+
+                return client_list
+
+
+        def get_data_list_of_client(self, base, client, prefix):
+                data_list = []
+
+                if base[0] != '/':
+                        base = os.path.join(self.hubblemon_path, base)
+
+                path = os.path.join(base, client)
+
+                for file in os.listdir(path):
+                        if file.startswith(prefix):
+                                data_list.append(file)
+
+                return data_list
 
 
 
-	def get_all_data_list(self, base, prefix):
-		data_list = []
-		for dir in os.listdir(base):
-			dir_path = os.path.join(base, dir)
+        def get_all_data_list(self, base, prefix):
+                data_list = []
+                for dir in os.listdir(base):
+                        dir_path = os.path.join(base, dir)
 
-			if os.path.isdir(dir_path):
-				for file in os.listdir(dir_path):
-					if file.startswith(prefix):
-						data_list.append(dir + '/' + file)						
+                        if os.path.isdir(dir_path):
+                                for file in os.listdir(dir_path):
+                                        if file.startswith(prefix):
+                                                data_list.append(dir + '/' + file)
 
-		return data_list
+                return data_list
 
+        
 
 # test for tsdb storage
 class tsdb_test_handle:
-	def __init__(self, rrd):
-		self.rrd = rrd
+        def __init__(self, rrd):
+                self.rrd = rrd
 
-	def read(self, start, end):
-		ret = self.rrd.read(start, end)
-		# ((start, end, step), (metric1, metric2, metric3), [(0, 0, 0), (1, 1, 1), ...]
-		range = ret[0]
-		start = range[0]
-		step = range[2]
+        def read(self, start, end):
+                ret = self.rrd.read(start, end)
+                # ((start, end, step), (metric1, metric2, metric3), [(0, 0, 0), (1, 1, 1), ...]
+                range = ret[0]
+                start = range[0]
+                step = range[2]
 
-		names = ret[1]
-		items = ret[2]
+                names = ret[1]
+                items = ret[2]
 
-		ts = start
-		result = []
-		for item in items:
-			new_item = (ts,) + item
-			result.append(new_item)
-			ts += step
-		
-		return ('#timestamp', names, result)
+                ts = start
+                result = []
+                for item in items:
+                        new_item = (ts,) + item
+                        result.append(new_item)
+                        ts += step
+                return ('#timestamp', names, result)
 
 
 class tsdb_test_storage_manager(rrd_storage_manager):
-	def __init__(self, hubblemon_path):
-		self.hubblemon_path = hubblemon_path
-		rrd_storage_manager.__init__(self, hubblemon_path)
+        def __init__(self, hubblemon_path):
+                self.hubblemon_path = hubblemon_path
+                rrd_storage_manager.__init__(self, hubblemon_path)
 
-	def get_handle(self, base, path):
-		if not path.endswith('.rrd'):
-			path += '.rrd'
+        def get_handle(self, base, path):
+                if not path.endswith('.rrd'):
+                        path += '.rrd'
 
-		try:
-			fd = self.get_local_data_handle(base, path)
-			rrd_handle =  common.rrd_data.rrd_data(fd.path)
-			return tsdb_test_handle(rrd_handle)
+                try:
+                        fd = self.get_local_data_handle(base, path)
+                        rrd_handle =  common.rrd_data.rrd_data(fd.path)
+                        return tsdb_test_handle(rrd_handle)
 
-		except:
-			return None
-
-
-# template for sqlite3 manager
-class sql_gw:
-	def __init__(self, type, connector):
-		self.type = type
-		self.connector = connector
-		# connect
-
-	def create(self, query):
-		cursor = self.handle.cursor()
-		cursor.execute() # TODO: return check
-
-	def select(self, query):
-		cursor = self.handle.cursor()
-		cursor.execute()
-		return cursor.fetchall()
-
-	def insert(self, table_name, values):
-		cursor = self.handle.cursor()
-		cursor.execute() # TODO: return check
-	
-
-class sql_handle:
-	def __init__(self, gw, name):
-		self.gw = gw
-		self.name = name
-
-	def read(self, start, end):
-		# make query using table name, start, end
-		results = self.gw.select(query)
-		# make tsdb style result lists and return
+                except:
+                        return None
 
 
-class sqlite3_storage_manager:
-	def __init__(self, db_path):
-		self.db_path = db_path
-		self.sql_gw = sql_gw('sqlite3', self.connector)
 
-	def connector(self):
-		# sqlite open with self.db_path
-		# and return
-		pass
 
-	def get_handle(self, param, path):
-		sql_handle(gw, name)
 
-	def get_client_list(self, param):
-		client_list = []
-		# select name from client_list
-		return client_list
+class sql_storage_manager:
+        def __init__(self, db_path):
+                self.db_path = db_path
+                self.sql_manager=common.sql_data.sql_gw(db_path)
 
-	def get_data_list_of_client(self, param, client, prefix):
-		data_list = []
-		# select name from sqlite_master where type = 'table' and name like 'D_%s_%s%%' % (client, prefix)
-		return data_list
 
-	def get_all_data_list(self, param, prefix):
-		data_list = []
-		# select name from sqlite_master where type = 'table' and name like 'D_%%_%s%%' % (prefix)
-		return data_list
+        def get_handle(self, base, path):
+                try:
+                        fd = self.get_local_data_handle(base, path)
+                        return common.sql_data.sql_gw(fd.path)
+
+                except:
+                        return None
+
+        def get_local_data_handle(self, base, path):
+                if base[0] != '/':
+                        base = os.path.join(self.db_path, base)
+                path = os.path.join(base, path)
+
+                fd = open(path)
+                fd.path = path
+                return fd
+
+        def get_client_list(self, param):
+                client_list = []
+                query = "SELECT name FROM sqlite_master WHERE type='table'"
+                table_list =self.sql_manager.select(query);
+                for table in table_list:
+                    client_name = table.split("_")[1]
+                    if clinet_name not in client_list:
+                        client_list.append(client_name)
+
+                print ("client_list:", client_list)
+                return client_list
+
+        def get_data_list_of_client(self, param, client, prefix):
+                data_list = []
+                # select name from sqlite_master where type = 'table' and name like 'D_%s_%s%%' % (client, prefix)
+                query = "SELECT name FROM sqlite_master WHERE type='table'"
+                table_list =self.sql_manager.select(query);
+                target_name ="D_"+client+"_"+prefix
+                for table in table_list:
+                    if table.startswith(target_name):
+                        data_list.append(table)
+                print ("data_list_of_client_list:", client_list)
+                return data_list
+
+        def get_all_data_list(self, param, prefix):
+                data_list = []
+                # select name from sqlite_master where type = 'table' and name like 'D_%%_%s%%' % (prefix)
+                query = "SELECT name FROM sqlite_master WHERE type='table'"
+                table_list =self.sql_manager.select(query);
+                for table in table_list:
+                    client_name = table.split("_")[1]
+                    target_name = "D_"+client_name+"_"+prefix
+                    if table.startswith(target_name):
+                        data_list.append(table)
+                print ("all_data_list:", client_list)
+                return data_list
 
 
 
 
 class remote_manager:
-	def __init__(self):
-		pass
+        def __init__(self):
+                pass
 
-	def get_handle(host, port, file = None):
-		handle = common.remote_data_reader.remote_data_reader(host, port, file)
-		return handle
+        def get_handle(host, port, file = None):
+                handle = common.remote_data_reader.remote_data_reader(host, port, file)
+                return handle
 
-		
 # utility
 def merge(loaders):
-	ret = merge_loader(loaders)
-	return ret
-	
+        ret = merge_loader(loaders)
+        return ret
 def sum_all(loaders):
-	ret = sum_loader(loaders)
-	return ret
+        ret = sum_loader(loaders)
+        return ret
 
 def filter(loaders, *filters):
-	ret = filter_loader(loaders, filters)
-	return ret
-	
+        ret = filter_loader(loaders, filters)
+        return ret
 def draw(range, *datas):
-	ret = draw_loader(range, datas)
-	return ret
+        ret = draw_loader(range, datas)
+        return ret
 
 # add functions to use at chart_page
 

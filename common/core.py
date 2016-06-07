@@ -36,7 +36,7 @@ mod_query_cache = {}
 #
 local_storage_manager = data_loader.loader_factory.rrd_storage_manager(hubblemon_path)
 #local_storage_manager = data_loader.loader_factory.tsdb_test_storage_manager(hubblemon_path)
-
+#local_storage_manager = data_loader.loader_factory.sql_storage_manager(hubblemon_path)
 remote_storage_manager = data_loader.loader_factory.remote_manager()
 
 def loader(path, filter = None, title = ''):
